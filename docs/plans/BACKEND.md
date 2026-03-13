@@ -26,14 +26,14 @@ Spec references:
 - [ ] Return 401 when token is absent or invalid
 
 ### Error handling
-- [ ] 422 with `{ "errors": { "body": [...] } }` for validation failures
-- [ ] 401 for unauthenticated requests to protected routes
-- [ ] 403 for authenticated requests that lack permission
-- [ ] 404 for resources that do not exist
+- [x] 422 with `{ "errors": { "body": [...] } }` for validation failures
+- [x] 401 for unauthenticated requests to protected routes
+- [x] 403 for authenticated requests that lack permission
+- [x] 404 for resources that do not exist
 
 ### CORS
-- [ ] Handle `OPTIONS` preflight requests
-- [ ] Return appropriate `Access-Control-Allow-Origin` and `Access-Control-Allow-Headers` headers
+- [x] Handle `OPTIONS` preflight requests
+- [x] Return appropriate `Access-Control-Allow-Origin` and `Access-Control-Allow-Headers` headers
 
 ### Tests
 - [ ] Pass [`realworld/specs/api/hurl/auth.hurl`](../../realworld/specs/api/hurl/auth.hurl)
