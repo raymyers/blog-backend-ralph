@@ -45,11 +45,38 @@ def get_user_service(session: Session = Depends(get_session)) -> UserService:
     return UserService(user_repo, password_hasher, token_generator)
 
 
-async def get_current_user(
+async def get_current_user_optional(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
+    session: Session = Depends(get_session),
+) -> Optional[User]:
+    """Get current authenticated user from JWT token (optional)."""
+    if credentials is None:
+        return None
+    
+    try:
+        token = credentials.credentials
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            return None
+    except JWTError:
+        return None
+    
+    user_repo = SQLModelUserRepository(session)
+    user = await user_repo.get_by_id(int(user_id))
+    
+    return user
+
+
+# Alias for backward compatibility
+get_current_user = get_current_user_optional
+
+
+async def get_current_user_required(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     session: Session = Depends(get_session),
 ) -> User:
-    """Get current authenticated user from JWT token."""
+    """Get current authenticated user from JWT token (required)."""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
