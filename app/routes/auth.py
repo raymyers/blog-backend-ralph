@@ -1,17 +1,16 @@
 """Authentication routes and dependency."""
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status, Header, Body
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Body
+from sqlmodel import Session
 from jose import JWTError, jwt
-from pydantic import ValidationError
 
 from app.database import get_session
 from app.adapters.database import SQLModelUserRepository
 from app.adapters.password import PasslibPasswordHasher
 from app.adapters.token import JWTTokenGenerator
-from app.use_cases.user_service import UserService
+from app.use_cases.user_service import UserService, DuplicateEmailError, DuplicateUsernameError, InvalidCredentialsError
+from pydantic import ValidationError as PydanticValidationError
 from app.schemas.user import (
     UserCreate,
     UserLogin,
@@ -33,8 +32,14 @@ ALGORITHM = "HS256"
 # Router
 router = APIRouter(prefix="/api", tags=["auth"])
 
-# Security
-security = HTTPBearer()
+
+def _extract_token(request: Request) -> Optional[str]:
+    """Extract JWT from 'Authorization: Token <jwt>' or 'Authorization: Bearer <jwt>'."""
+    auth = request.headers.get("Authorization", "")
+    for prefix in ("Token ", "Bearer "):
+        if auth.startswith(prefix):
+            return auth[len(prefix):]
+    return None
 
 
 def get_user_service(session: Session = Depends(get_session)) -> UserService:
@@ -46,26 +51,24 @@ def get_user_service(session: Session = Depends(get_session)) -> UserService:
 
 
 async def get_current_user_optional(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
+    request: Request,
     session: Session = Depends(get_session),
 ) -> Optional[User]:
     """Get current authenticated user from JWT token (optional)."""
-    if credentials is None:
+    token = _extract_token(request)
+    if token is None:
         return None
-    
+
     try:
-        token = credentials.credentials
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("sub")
         if user_id is None:
             return None
     except JWTError:
         return None
-    
+
     user_repo = SQLModelUserRepository(session)
-    user = await user_repo.get_by_id(int(user_id))
-    
-    return user
+    return await user_repo.get_by_id(int(user_id))
 
 
 # Alias for backward compatibility
@@ -73,18 +76,19 @@ get_current_user = get_current_user_optional
 
 
 async def get_current_user_required(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    request: Request,
     session: Session = Depends(get_session),
 ) -> User:
     """Get current authenticated user from JWT token (required)."""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
+        detail={"errors": {"token": ["is missing"]}},
     )
-    
-    token = credentials.credentials
-    
+
+    token = _extract_token(request)
+    if token is None:
+        raise credentials_exception
+
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("sub")
@@ -92,13 +96,13 @@ async def get_current_user_required(
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    
+
     user_repo = SQLModelUserRepository(session)
     user = await user_repo.get_by_id(int(user_id))
-    
+
     if user is None:
         raise credentials_exception
-    
+
     return user
 
 
@@ -123,11 +127,10 @@ async def register(
                 token=token,
             )
         )
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail={"errors": {"body": [str(e)]}},
-        )
+    except DuplicateEmailError:
+        raise HTTPException(status_code=409, detail={"errors": {"email": ["has already been taken"]}})
+    except DuplicateUsernameError:
+        raise HTTPException(status_code=409, detail={"errors": {"username": ["has already been taken"]}})
 
 
 @router.post("/users/login", response_model=UserWithTokenWrapper)
@@ -147,22 +150,18 @@ async def login(
                 token=token,
             )
         )
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"errors": {"body": ["Invalid credentials"]}},
-        )
+    except InvalidCredentialsError:
+        raise HTTPException(status_code=401, detail={"errors": {"credentials": ["invalid"]}})
 
 
 @router.get("/user", response_model=UserWithTokenWrapper)
 async def get_current_user_endpoint(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_required),
     user_service: UserService = Depends(get_user_service),
 ):
     """Get current user."""
-    # Generate fresh token
     token = await user_service.generate_fresh_token(current_user)
-    
+
     return UserWithTokenWrapper(
         user=UserWithToken(
             email=current_user.email,
@@ -177,13 +176,25 @@ async def get_current_user_endpoint(
 @router.put("/user", response_model=UserWithTokenWrapper)
 async def update_current_user(
     body: dict = Body(...),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_required),
     user_service: UserService = Depends(get_user_service),
 ):
     """Update current user."""
     user_data = body.get("user", {})
-    user_update = UserUpdate(**user_data)
-    
+    try:
+        user_update = UserUpdate(**user_data)
+    except PydanticValidationError as exc:
+        errors = {}
+        for error in exc.errors():
+            loc = error.get("loc", [])
+            field = str(loc[-1]) if loc else "body"
+            msg_raw = error.get("msg", "is invalid")
+            msg = msg_raw[len("Value error, "):] if msg_raw.startswith("Value error, ") else msg_raw
+            if field not in errors:
+                errors[field] = []
+            errors[field].append(msg)
+        raise HTTPException(status_code=422, detail={"errors": errors})
+
     try:
         updated_user = await user_service.update_user(current_user.id, user_update)
         token = await user_service.generate_fresh_token(updated_user)

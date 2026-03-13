@@ -9,66 +9,53 @@ from app.adapters.database import SQLModelUserRepository
 
 class CommentService:
     """Service for comment operations."""
-    
+
     def __init__(self, session):
         self.session = session
-    
-    async def create_comment(self, article_slug: str, author: User, body: str) -> Optional[Comment]:
-        """Create a new comment on an article."""
-        # Get article
+
+    def _get_article(self, article_slug: str):
         statement = select(Article).where(Article.slug == article_slug)
-        article = self.session.exec(statement).first()
-        
+        return self.session.exec(statement).first()
+
+    async def create_comment(self, article_slug: str, author: User, body: str) -> Comment:
+        """Create a new comment on an article. Raises KeyError if article not found."""
+        article = self._get_article(article_slug)
         if not article:
-            return None
-        
-        # Create comment
+            raise KeyError("article")
+
         comment = Comment(
             body=body,
             author_id=author.id,
             article_id=article.id,
         )
-        
         self.session.add(comment)
         self.session.commit()
         self.session.refresh(comment)
-        
         return comment
-    
+
     async def get_comments(self, article_slug: str) -> List[Comment]:
-        """Get all comments for an article."""
-        # Get article
-        statement = select(Article).where(Article.slug == article_slug)
-        article = self.session.exec(statement).first()
-        
+        """Get all comments for an article. Raises KeyError if article not found."""
+        article = self._get_article(article_slug)
         if not article:
-            return []
-        
-        # Get comments
+            raise KeyError("article")
+
         statement = select(Comment).where(Comment.article_id == article.id).order_by(Comment.created_at.desc())
         return list(self.session.exec(statement).all())
-    
-    async def delete_comment(self, article_slug: str, comment_id: int, user_id: int) -> bool:
-        """Delete a comment."""
-        # Get article
-        statement = select(Article).where(Article.slug == article_slug)
-        article = self.session.exec(statement).first()
-        
+
+    async def delete_comment(self, article_slug: str, comment_id: int, user_id: int) -> None:
+        """Delete a comment. Raises KeyError for not found, PermissionError for forbidden."""
+        article = self._get_article(article_slug)
         if not article:
-            return False
-        
-        # Get comment
+            raise KeyError("article")
+
         statement = select(Comment).where(Comment.id == comment_id, Comment.article_id == article.id)
         comment = self.session.exec(statement).first()
-        
+
         if not comment:
-            return False
-        
-        # Check ownership
+            raise KeyError("comment")
+
         if comment.author_id != user_id:
-            return False
-        
+            raise PermissionError("comment")
+
         self.session.delete(comment)
         self.session.commit()
-        
-        return True

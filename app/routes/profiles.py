@@ -40,7 +40,7 @@ async def get_profile(
     profile = await profile_service.get_profile(username, user_id)
     
     if not profile:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail={"errors": {"profile": ["not found"]}})
     
     return ProfileWrapper(profile=profile)
 
@@ -58,7 +58,7 @@ async def follow_user(
         raise HTTPException(status_code=400, detail=str(e))
     
     if not profile:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail={"errors": {"profile": ["not found"]}})
     
     return ProfileWrapper(profile=profile)
 
@@ -73,6 +73,6 @@ async def unfollow_user(
     profile = await profile_service.unfollow_user(username, current_user.id)
     
     if not profile:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail={"errors": {"profile": ["not found"]}})
     
     return ProfileWrapper(profile=profile)

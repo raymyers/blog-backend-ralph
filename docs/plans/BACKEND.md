@@ -36,8 +36,8 @@ Spec references:
 - [x] Return appropriate `Access-Control-Allow-Origin` and `Access-Control-Allow-Headers` headers
 
 ### Tests
-- [ ] Pass [`realworld/specs/api/hurl/auth.hurl`](../../realworld/specs/api/hurl/auth.hurl)
-- [ ] Pass [`realworld/specs/api/hurl/errors_auth.hurl`](../../realworld/specs/api/hurl/errors_auth.hurl)
+- [x] Pass [`realworld/specs/api/hurl/auth.hurl`](../../realworld/specs/api/hurl/auth.hurl)
+- [x] Pass [`realworld/specs/api/hurl/errors_auth.hurl`](../../realworld/specs/api/hurl/errors_auth.hurl)
 
 ---
 
@@ -60,9 +60,9 @@ Spec references:
 - [x] `DELETE /api/articles/:slug/favorite` — auth required; returns updated article; idempotent
 
 ### Tests
-- [ ] Pass [`realworld/specs/api/hurl/articles.hurl`](../../realworld/specs/api/hurl/articles.hurl)
-- [ ] Pass [`realworld/specs/api/hurl/tags.hurl`](../../realworld/specs/api/hurl/tags.hurl)
-- [ ] Pass [`realworld/specs/api/hurl/errors_articles.hurl`](../../realworld/specs/api/hurl/errors_articles.hurl)
+- [x] Pass [`realworld/specs/api/hurl/articles.hurl`](../../realworld/specs/api/hurl/articles.hurl)
+- [x] Pass [`realworld/specs/api/hurl/tags.hurl`](../../realworld/specs/api/hurl/tags.hurl)
+- [x] Pass [`realworld/specs/api/hurl/errors_articles.hurl`](../../realworld/specs/api/hurl/errors_articles.hurl)
 
 ---
 
@@ -80,8 +80,8 @@ Spec references:
 - [x] `DELETE /api/profiles/:username/follow` — auth required; 404 for unknown username
 
 ### Tests
-- [ ] Pass [`realworld/specs/api/hurl/profiles.hurl`](../../realworld/specs/api/hurl/profiles.hurl)
-- [ ] Pass [`realworld/specs/api/hurl/errors_profiles.hurl`](../../realworld/specs/api/hurl/errors_profiles.hurl)
+- [x] Pass [`realworld/specs/api/hurl/profiles.hurl`](../../realworld/specs/api/hurl/profiles.hurl)
+- [x] Pass [`realworld/specs/api/hurl/errors_profiles.hurl`](../../realworld/specs/api/hurl/errors_profiles.hurl)
 
 ---
 
@@ -94,8 +94,8 @@ Spec references:
 - [x] `GET /api/articles/feed` — auth required; returns articles by followed users only; same pagination parameters and response shape
 
 ### Tests
-- [ ] Pass [`realworld/specs/api/hurl/pagination.hurl`](../../realworld/specs/api/hurl/pagination.hurl)
-- [ ] Pass [`realworld/specs/api/hurl/feed.hurl`](../../realworld/specs/api/hurl/feed.hurl)
+- [x] Pass [`realworld/specs/api/hurl/pagination.hurl`](../../realworld/specs/api/hurl/pagination.hurl)
+- [x] Pass [`realworld/specs/api/hurl/feed.hurl`](../../realworld/specs/api/hurl/feed.hurl)
 
 ---
 
@@ -112,9 +112,9 @@ Spec references:
 - [x] `DELETE /api/articles/:slug/comments/:id` — auth required, comment owner only; 403 for non-owner; 404 for unknown slug or comment
 
 ### Tests
-- [ ] Pass [`realworld/specs/api/hurl/comments.hurl`](../../realworld/specs/api/hurl/comments.hurl)
-- [ ] Pass [`realworld/specs/api/hurl/errors_comments.hurl`](../../realworld/specs/api/hurl/errors_comments.hurl)
-- [ ] Pass [`realworld/specs/api/hurl/errors_authorization.hurl`](../../realworld/specs/api/hurl/errors_authorization.hurl)
+- [x] Pass [`realworld/specs/api/hurl/comments.hurl`](../../realworld/specs/api/hurl/comments.hurl)
+- [x] Pass [`realworld/specs/api/hurl/errors_comments.hurl`](../../realworld/specs/api/hurl/errors_comments.hurl)
+- [x] Pass [`realworld/specs/api/hurl/errors_authorization.hurl`](../../realworld/specs/api/hurl/errors_authorization.hurl)
 
 ---
 
@@ -133,5 +133,5 @@ Spec references:
 - [x] Filter `GET /api/articles?favorited=:username` returns articles favorited by that user (update listing from Milestone 4)
 
 ### Tests
-- [ ] Pass [`realworld/specs/api/hurl/favorites.hurl`](../../realworld/specs/api/hurl/favorites.hurl)
-- [ ] Pass full suite: `HOST=http://localhost:3000/api ./realworld/specs/api/run-api-tests-hurl.sh`
+- [x] Pass [`realworld/specs/api/hurl/favorites.hurl`](../../realworld/specs/api/hurl/favorites.hurl)
+- [x] Pass full suite: `HOST=http://localhost:3000/api ./realworld/specs/api/run-api-tests-hurl.sh`

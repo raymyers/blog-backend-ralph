@@ -2,7 +2,16 @@
 from typing import Optional
 from datetime import datetime
 
-from sqlalchemy.orm import Session
+class DuplicateEmailError(Exception):
+    pass
+
+
+class DuplicateUsernameError(Exception):
+    pass
+
+
+class InvalidCredentialsError(Exception):
+    pass
 
 from app.domain.models import User
 from app.schemas.user import UserCreate, UserUpdate
@@ -24,15 +33,13 @@ class UserService:
     
     async def register(self, user_data: UserCreate) -> tuple[User, str]:
         """Register a new user and return user with token."""
-        # Check if email exists
         existing_email = await self.user_repository.get_by_email(user_data.email)
         if existing_email:
-            raise ValueError("Email already registered")
-        
-        # Check if username exists
+            raise DuplicateEmailError()
+
         existing_username = await self.user_repository.get_by_username(user_data.username)
         if existing_username:
-            raise ValueError("Username already taken")
+            raise DuplicateUsernameError()
         
         # Create user
         password_hash = self.password_hasher.hash(user_data.password)
@@ -55,10 +62,10 @@ class UserService:
         """Login user and return user with token."""
         user = await self.user_repository.get_by_email(email)
         if not user:
-            raise ValueError("Invalid credentials")
-        
+            raise InvalidCredentialsError()
+
         if not self.password_hasher.verify(password, user.password_hash):
-            raise ValueError("Invalid credentials")
+            raise InvalidCredentialsError()
         
         token = self.token_generator.create_access_token(
             data={"sub": str(user.id), "email": user.email}
@@ -102,15 +109,13 @@ class UserService:
         if user_data.password is not None:
             user.password_hash = self.password_hasher.hash(user_data.password)
         
-        if user_data.bio is not None:
-            # Empty string normalizes to null
-            new_bio = user_data.bio if user_data.bio.strip() else None
-            user.bio = new_bio
-        
-        if user_data.image is not None:
-            # Empty string normalizes to null
-            new_image = user_data.image if user_data.image.strip() else None
-            user.image = new_image
+        if "bio" in user_data.model_fields_set:
+            # null or empty string normalizes to null
+            user.bio = user_data.bio if (user_data.bio and user_data.bio.strip()) else None
+
+        if "image" in user_data.model_fields_set:
+            # null or empty string normalizes to null
+            user.image = user_data.image if (user_data.image and user_data.image.strip()) else None
         
         user.updated_at = datetime.utcnow()
         

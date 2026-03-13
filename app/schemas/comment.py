@@ -1,7 +1,7 @@
 """Pydantic schemas for comments."""
 from datetime import datetime
-from typing import Optional
-from pydantic import BaseModel, ConfigDict
+from typing import Optional, List
+from pydantic import BaseModel
 
 
 class CommentCreate(BaseModel):
@@ -9,15 +9,21 @@ class CommentCreate(BaseModel):
     body: str
 
 
+class CommentAuthorProfile(BaseModel):
+    """Author info in comment response."""
+    username: str
+    bio: Optional[str] = None
+    image: Optional[str] = None
+    following: bool = False
+
+
 class CommentResponse(BaseModel):
-    """Schema for comment response."""
-    model_config = ConfigDict(from_attributes=True)
-    
+    """Schema for comment response (camelCase)."""
     id: int
     body: str
-    created_at: datetime
-    updated_at: datetime
-    author: dict  # Will be populated with username, bio, image
+    createdAt: datetime
+    updatedAt: datetime
+    author: CommentAuthorProfile
 
 
 class CommentWrapper(BaseModel):
@@ -27,4 +33,4 @@ class CommentWrapper(BaseModel):
 
 class CommentListWrapper(BaseModel):
     """Wrapper for comment list response."""
-    comments: list[CommentResponse]
+    comments: List[CommentResponse]

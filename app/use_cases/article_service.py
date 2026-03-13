@@ -114,40 +114,30 @@ class ArticleService:
     
     async def list_articles(
         self,
-        tag: Optional[str] = None,
-        author: Optional[str] = None,
-        favorited: Optional[str] = None,
+        tag=None,
+        author_id=None,
+        favorited=None,
         limit: int = 20,
         offset: int = 0,
-        current_user_id: Optional[int] = None,
-    ) -> tuple[List[Article], int]:
+        current_user_id=None,
+    ):
         """List articles with filters."""
-        articles: List[Article]
-        
         if tag:
             articles = await self.article_repository.get_by_tag(tag, limit, offset)
-        elif author:
-            # Get author user first
-            from app.adapters.database import SQLModelUserRepository
-            from app.database import Session
-            with Session() as session:
-                user_repo = SQLModelUserRepository(session)
-                author_user = await user_repo.get_by_username(author)
-                if author_user:
-                    articles = await self.article_repository.get_by_author(author_user.id, limit, offset)
-                else:
-                    articles = []
+        elif author_id is not None:
+            articles = await self.article_repository.get_by_author(author_id, limit, offset)
         elif favorited:
             articles = await self.article_repository.get_favorited_by(favorited, limit, offset)
         else:
             articles = await self.article_repository.get_all(limit, offset)
-        
-        # Get total count (simplified - would need proper count queries for production)
-        total = len(articles)
-        
-        return articles, total
-    
-    async def get_feed(self, follower_ids: List[int], limit: int = 20, offset: int = 0) -> List[Article]:
+        return articles, len(articles)
+
+    async def count_feed(self, following_ids):
+        """Count articles in feed."""
+        articles = await self.article_repository.get_feed(following_ids, limit=10000, offset=0)
+        return len(articles)
+
+    async def get_feed(self, follower_ids, limit: int = 20, offset: int = 0):
         """Get feed of articles from followed users."""
         return await self.article_repository.get_feed(follower_ids, limit, offset)
     

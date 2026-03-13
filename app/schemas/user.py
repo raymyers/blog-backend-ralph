@@ -1,51 +1,51 @@
 """Pydantic schemas for API request/response validation."""
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional
 
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
-
-
-# Request Schemas
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 
 class UserCreate(BaseModel):
     """Schema for user registration."""
-    email: EmailStr
-    username: str = Field(min_length=3, max_length=50)
-    password: str = Field(min_length=8)
+    email: str
+    username: str
+    password: str
+
+    @field_validator("email", "username", "password", mode="before")
+    @classmethod
+    def not_blank(cls, v, info):
+        if v is None or str(v).strip() == "":
+            raise ValueError("can't be blank")
+        return v
 
 
 class UserLogin(BaseModel):
     """Schema for user login."""
-    email: EmailStr
+    email: str
     password: str
+
+    @field_validator("email", "password", mode="before")
+    @classmethod
+    def not_blank(cls, v, info):
+        if v is None or str(v).strip() == "":
+            raise ValueError("can't be blank")
+        return v
 
 
 class UserUpdate(BaseModel):
     """Schema for updating user profile."""
-    model_config = ConfigDict(validate_default=True)
-    
-    email: Optional[EmailStr] = None
-    username: Optional[str] = Field(default=None, min_length=3, max_length=50)
-    password: Optional[str] = Field(default=None, min_length=8)
+    email: Optional[str] = None
+    username: Optional[str] = None
+    password: Optional[str] = None
     bio: Optional[str] = None
     image: Optional[str] = None
 
-
-# Response Schemas
-
-
-class UserResponse(BaseModel):
-    """Schema for user in responses."""
-    model_config = ConfigDict(from_attributes=True)
-    
-    id: int
-    email: str
-    username: str
-    bio: Optional[str] = None
-    image: Optional[str] = None
-    created_at: datetime
-    updated_at: datetime
+    @field_validator("email", "username", mode="before")
+    @classmethod
+    def no_blank_required(cls, v, info):
+        if v is None or (isinstance(v, str) and v.strip() == ""):
+            raise ValueError("can't be blank")
+        return v
 
 
 class UserWithToken(BaseModel):
@@ -55,11 +55,6 @@ class UserWithToken(BaseModel):
     bio: Optional[str] = None
     image: Optional[str] = None
     token: str
-
-
-class UserResponseWrapper(BaseModel):
-    """Wrapper for user in API response."""
-    user: UserResponse
 
 
 class UserWithTokenWrapper(BaseModel):
@@ -72,9 +67,6 @@ class ErrorResponse(BaseModel):
     errors: dict = Field(default_factory=dict)
 
 
-# Auth
-
-
 class LoginRequest(BaseModel):
     """Wrapper for login request."""
     user: UserLogin
@@ -83,3 +75,8 @@ class LoginRequest(BaseModel):
 class RegisterRequest(BaseModel):
     """Wrapper for registration request."""
     user: UserCreate
+
+
+# Keep for backward compat
+UserResponse = UserWithToken
+UserResponseWrapper = UserWithTokenWrapper

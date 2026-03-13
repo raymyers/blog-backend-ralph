@@ -1,6 +1,7 @@
 """Comment routes for the API."""
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Body
+from pydantic import ValidationError as PydanticValidationError
 
 from app.domain.models import User
 from app.schemas.comment import (
@@ -9,15 +10,31 @@ from app.schemas.comment import (
     CommentCreate,
 )
 from app.use_cases.comment_service import CommentService
+from app.adapters.database import SQLModelUserRepository
 from app.database import get_session
 from app.routes.auth import get_current_user, get_current_user_required
 
 router = APIRouter(prefix="/api/articles", tags=["comments"])
 
 
-def get_comment_service(session = Depends(get_session)) -> CommentService:
+def get_comment_service(session=Depends(get_session)) -> CommentService:
     """Get comment service."""
     return CommentService(session)
+
+
+def _comment_response(comment, author: User, following: bool = False) -> dict:
+    return {
+        "id": comment.id,
+        "body": comment.body,
+        "createdAt": comment.created_at,
+        "updatedAt": comment.updated_at,
+        "author": {
+            "username": author.username,
+            "bio": author.bio,
+            "image": author.image,
+            "following": following,
+        },
+    }
 
 
 @router.post("/{slug}/comments", response_model=CommentWrapper, status_code=201)
@@ -28,70 +45,67 @@ async def create_comment(
     comment_service: CommentService = Depends(get_comment_service),
 ):
     """Create a comment on an article."""
-    comment_data = CommentCreate(**body.get("comment", {}))
-    
-    comment = await comment_service.create_comment(slug, current_user, comment_data.body)
-    
-    if not comment:
-        raise HTTPException(status_code=404, detail="Article not found")
-    
-    return CommentWrapper(comment={
-        "id": comment.id,
-        "body": comment.body,
-        "created_at": comment.created_at,
-        "updated_at": comment.updated_at,
-        "author": {
-            "username": current_user.username,
-            "bio": current_user.bio,
-            "image": current_user.image,
-        },
-    })
+    comment_body = body.get("comment", {}).get("body", "")
+    if not comment_body or not str(comment_body).strip():
+        raise HTTPException(status_code=422, detail={"errors": {"body": ["can't be blank"]}})
+
+    try:
+        comment = await comment_service.create_comment(slug, current_user, comment_body)
+    except KeyError as e:
+        field = str(e).strip("'")
+        raise HTTPException(status_code=404, detail={"errors": {field: ["not found"]}})
+
+    return CommentWrapper(comment=_comment_response(comment, current_user))
 
 
 @router.get("/{slug}/comments", response_model=CommentListWrapper)
 async def get_comments(
     slug: str,
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user),
     comment_service: CommentService = Depends(get_comment_service),
+    session=Depends(get_session),
 ):
     """Get all comments for an article."""
-    comments = await comment_service.get_comments(slug)
-    
-    # Get author info for each comment
+    try:
+        comments = await comment_service.get_comments(slug)
+    except KeyError as e:
+        field = str(e).strip("'")
+        raise HTTPException(status_code=404, detail={"errors": {field: ["not found"]}})
+
+    user_repo = SQLModelUserRepository(session)
     comment_list = []
-    user_repo = None
-    if comments:
-        from app.adapters.database import SQLModelUserRepository
-        user_repo = SQLModelUserRepository(comment_service.session)
-    
     for comment in comments:
-        author = await user_repo.get_by_id(comment.author_id) if user_repo else None
+        author = await user_repo.get_by_id(comment.author_id)
         comment_list.append({
             "id": comment.id,
             "body": comment.body,
-            "created_at": comment.created_at,
-            "updated_at": comment.updated_at,
+            "createdAt": comment.created_at,
+            "updatedAt": comment.updated_at,
             "author": {
                 "username": author.username if author else "unknown",
                 "bio": author.bio if author else None,
                 "image": author.image if author else None,
+                "following": False,
             },
         })
-    
+
     return CommentListWrapper(comments=comment_list)
 
 
-@router.delete("/{slug}/comments/{id}", status_code=204)
+@router.delete("/{slug}/comments/{comment_id}", status_code=204)
 async def delete_comment(
     slug: str,
-    id: int,
+    comment_id: int,
     current_user: User = Depends(get_current_user_required),
     comment_service: CommentService = Depends(get_comment_service),
 ):
     """Delete a comment."""
-    deleted = await comment_service.delete_comment(slug, id, current_user.id)
-    
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Comment not found")
-    
+    try:
+        await comment_service.delete_comment(slug, comment_id, current_user.id)
+    except KeyError as e:
+        field = str(e).strip("'")
+        raise HTTPException(status_code=404, detail={"errors": {field: ["not found"]}})
+    except PermissionError:
+        raise HTTPException(status_code=403, detail={"errors": {"comment": ["forbidden"]}})
+
     return None

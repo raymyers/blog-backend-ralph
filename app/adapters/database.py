@@ -30,39 +30,21 @@ class SQLModelUserRepository(UserRepository):
         return self.session.exec(statement).first()
     
     async def update(self, user: User) -> User:
-        # Create a new session for the update operation
-        from sqlmodel import Session as SQLSession
-        from app.database import engine
-        
-        with SQLSession(engine) as session:
-            db_user = session.get(User, user.id)
-            if not db_user:
-                return user
-            
-            db_user.email = user.email
-            db_user.username = user.username
-            db_user.password_hash = user.password_hash
-            db_user.bio = user.bio
-            db_user.image = user.image
-            db_user.updated_at = user.updated_at
-            
-            session.add(db_user)
-            session.commit()
-            session.refresh(db_user)
-            
-            # Return a new object with updated values
-            return User(
-                id=db_user.id,
-                email=db_user.email,
-                username=db_user.username,
-                password_hash=db_user.password_hash,
-                bio=db_user.bio,
-                image=db_user.image,
-                created_at=db_user.created_at,
-                updated_at=db_user.updated_at,
-            )
+        db_user = self.session.get(User, user.id)
+        if not db_user:
+            return user
 
+        db_user.email = user.email
+        db_user.username = user.username
+        db_user.password_hash = user.password_hash
+        db_user.bio = user.bio
+        db_user.image = user.image
+        db_user.updated_at = user.updated_at
 
+        self.session.add(db_user)
+        self.session.commit()
+        self.session.refresh(db_user)
+        return db_user
 class SQLModelArticleRepository(ArticleRepository):
     """SQLModel implementation of ArticleRepository."""
     
@@ -83,17 +65,17 @@ class SQLModelArticleRepository(ArticleRepository):
         return self.session.get(Article, article_id)
     
     async def get_all(self, limit: int = 20, offset: int = 0) -> List[Article]:
-        statement = select(Article).order_by(Article.created_at.desc()).offset(offset).limit(limit)
+        statement = select(Article).order_by(Article.created_at.desc(), Article.id.desc()).offset(offset).limit(limit)
         return list(self.session.exec(statement).all())
     
     async def get_by_author(self, author_id: int, limit: int = 20, offset: int = 0) -> List[Article]:
-        statement = select(Article).where(Article.author_id == author_id).order_by(Article.created_at.desc()).offset(offset).limit(limit)
+        statement = select(Article).where(Article.author_id == author_id).order_by(Article.created_at.desc(), Article.id.desc()).offset(offset).limit(limit)
         return list(self.session.exec(statement).all())
     
     async def get_by_tag(self, tag: str, limit: int = 20, offset: int = 0) -> List[Article]:
         # Use JSON contains for SQLite
         from sqlalchemy import and_
-        statement = select(Article).where(Article.tag_list_json.contains(f'"{tag}"')).order_by(Article.created_at.desc()).offset(offset).limit(limit)
+        statement = select(Article).where(Article.tag_list_json.contains(f'"{tag}"')).order_by(Article.created_at.desc(), Article.id.desc()).offset(offset).limit(limit)
         return list(self.session.exec(statement).all())
     
     async def get_favorited_by(self, username: str, limit: int = 20, offset: int = 0) -> List[Article]:
@@ -103,15 +85,39 @@ class SQLModelArticleRepository(ArticleRepository):
             return []
         
         # Get articles favorited by user
-        statement = select(Article).join(Favorite).where(Favorite.user_id == user.id).order_by(Article.created_at.desc()).offset(offset).limit(limit)
+        statement = select(Article).join(Favorite).where(Favorite.user_id == user.id).order_by(Article.created_at.desc(), Article.id.desc()).offset(offset).limit(limit)
         return list(self.session.exec(statement).all())
     
     async def get_feed(self, follower_ids: List[int], limit: int = 20, offset: int = 0) -> List[Article]:
         if not follower_ids:
             return []
-        statement = select(Article).where(Article.author_id.in_(follower_ids)).order_by(Article.created_at.desc()).offset(offset).limit(limit)
+        statement = select(Article).where(Article.author_id.in_(follower_ids)).order_by(Article.created_at.desc(), Article.id.desc()).offset(offset).limit(limit)
         return list(self.session.exec(statement).all())
     
+
+    async def count_all(self) -> int:
+        from sqlalchemy import func
+        statement = select(func.count()).select_from(Article)
+        return self.session.exec(statement).one()
+
+    async def count_by_author(self, author_id: int) -> int:
+        from sqlalchemy import func
+        statement = select(func.count()).select_from(Article).where(Article.author_id == author_id)
+        return self.session.exec(statement).one()
+
+    async def count_by_tag(self, tag: str) -> int:
+        from sqlalchemy import func
+        statement = select(func.count()).select_from(Article).where(Article.tag_list_json.contains(f'"{tag}"'))
+        return self.session.exec(statement).one()
+
+    async def count_favorited_by(self, username: str) -> int:
+        from sqlalchemy import func
+        user = self.session.exec(select(User).where(User.username == username)).first()
+        if not user:
+            return 0
+        statement = select(func.count()).select_from(Article).join(Favorite).where(Favorite.user_id == user.id)
+        return self.session.exec(statement).one()
+
     async def update(self, article: Article) -> Article:
         db_article = self.session.get(Article, article.id)
         if not db_article:
