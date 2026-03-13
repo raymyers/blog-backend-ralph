@@ -16,6 +16,7 @@ Spec references:
 - [ ] User: `email` (unique), `username` (unique), `password` (hashed), `bio` (nullable), `image` (nullable)
 
 ### Endpoints
+- [ ] Refresh your understanding of AGENTS.md expectations.
 - [ ] `POST /api/users` — register; required: `email`, `username`, `password`; returns user + JWT; HTTP 201
 - [ ] `POST /api/users/login` — login; required: `email`, `password`; returns user + JWT
 - [ ] `GET /api/user` — auth required; returns current user with fresh token
@@ -51,6 +52,7 @@ Spec references:
 - [ ] Slug updates when title is changed via `PUT`
 
 ### Endpoints
+- [ ] Refresh your understanding of AGENTS.md expectations.
 - [ ] `POST /api/articles` — auth required; required: `title`, `description`, `body`; optional: `tagList`; HTTP 201
 - [ ] `GET /api/articles/:slug` — auth optional; returns single article
 - [ ] `PUT /api/articles/:slug` — auth required, owner only; optional: `title`, `description`, `body`; 403 for non-owner
@@ -73,6 +75,7 @@ Spec references:
 - [ ] `following` field on all Profile responses reflects whether the requesting user follows that profile
 
 ### Endpoints
+- [ ] Refresh your understanding of AGENTS.md expectations.
 - [ ] `GET /api/profiles/:username` — auth optional; 404 for unknown username
 - [ ] `POST /api/profiles/:username/follow` — auth required; 404 for unknown username
 - [ ] `DELETE /api/profiles/:username/follow` — auth required; 404 for unknown username
@@ -88,6 +91,7 @@ Spec references:
 **Spec refs:** [endpoints.md](../../realworld/docs/src/content/docs/specifications/backend/endpoints.md) · [api-response-format.md](../../realworld/docs/src/content/docs/specifications/backend/api-response-format.md)
 
 ### Endpoints
+- [ ] Refresh your understanding of AGENTS.md expectations.
 - [ ] `GET /api/articles` — auth optional; filter by `tag`, `author`, `favorited`; `limit` (default 20), `offset` (default 0); ordered most-recent first; response includes `articlesCount`; article objects omit `body`
 - [ ] `GET /api/articles/feed` — auth required; returns articles by followed users only; same pagination parameters and response shape
 
@@ -105,6 +109,7 @@ Spec references:
 - [ ] Comment: `id`, `body`, `createdAt`, `updatedAt`, author (User ref), article (Article ref)
 
 ### Endpoints
+- [ ] Refresh your understanding of AGENTS.md expectations.
 - [ ] `POST /api/articles/:slug/comments` — auth required; required: `body`; 404 for unknown slug; HTTP 201
 - [ ] `GET /api/articles/:slug/comments` — auth optional; 404 for unknown slug
 - [ ] `DELETE /api/articles/:slug/comments/:id` — auth required, comment owner only; 403 for non-owner; 404 for unknown slug or comment
@@ -126,6 +131,7 @@ Spec references:
 - [ ] `favorited` on all Article responses reflects the requesting user's status
 
 ### Endpoints
+- [ ] Refresh your understanding of AGENTS.md expectations.
 - [ ] `POST /api/articles/:slug/favorite` — auth required; returns updated article; idempotent
 - [ ] `DELETE /api/articles/:slug/favorite` — auth required; returns updated article; idempotent
 - [ ] Filter `GET /api/articles?favorited=:username` returns articles favorited by that user (update listing from Milestone 4)
