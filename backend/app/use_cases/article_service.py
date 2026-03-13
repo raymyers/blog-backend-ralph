@@ -6,6 +6,8 @@ from app.domain.models import Article
 from app.ports.interfaces import ArticleRepository, FollowRepository, UserRepository
 from app.use_cases.errors import ForbiddenError, NotFoundError, ValidationError
 
+_UNSET = object()  # sentinel for distinguishing "not provided" from None/[]
+
 
 def _slugify(title: str) -> str:
     slug = title.lower().strip()
@@ -74,6 +76,7 @@ class ArticleService:
         title: str | None = None,
         description: str | None = None,
         body: str | None = None,
+        tag_list: object = _UNSET,
     ) -> Article:
         article = self._articles.find_by_slug(slug)
         if article is None:
@@ -82,12 +85,14 @@ class ArticleService:
             raise ForbiddenError()
 
         new_slug = self._unique_slug(title) if title is not None else article.slug
+        new_tags = article.tag_list if tag_list is _UNSET else list(tag_list)  # type: ignore[arg-type]
         updated = replace(
             article,
             slug=new_slug,
             title=title if title is not None else article.title,
             description=description if description is not None else article.description,
             body=body if body is not None else article.body,
+            tag_list=new_tags,
         )
         return self._articles.update(updated)
 

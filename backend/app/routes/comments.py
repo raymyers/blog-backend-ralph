@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.deps import CommentServiceDep, OptionalUserIdDep, ProfileServiceDep, RequiredUserIdDep
 from app.domain.models import Comment, User
-from app.use_cases.errors import ForbiddenError, NotFoundError
+from app.use_cases.errors import CommentNotFoundError, ForbiddenError, NotFoundError, ValidationError
 
 router = APIRouter()
 
@@ -51,8 +51,10 @@ def add_comment(
     data = body.get("comment", {})
     try:
         comment = comment_svc.add(slug, author_id=user_id, body=data.get("body", ""))
+    except ValidationError as e:
+        raise HTTPException(422, detail={"errors": {e.field: [e.message]}})
     except NotFoundError:
-        raise HTTPException(404, detail={"errors": {"body": ["Not Found"]}})
+        raise HTTPException(404, detail={"errors": {"article": ["not found"]}})
     return {"comment": _resolve_comment(comment, profile_svc, user_id)}
 
 
@@ -66,11 +68,11 @@ def list_comments(
     try:
         comments = comment_svc.list_for_article(slug)
     except NotFoundError:
-        raise HTTPException(404, detail={"errors": {"body": ["Not Found"]}})
+        raise HTTPException(404, detail={"errors": {"article": ["not found"]}})
     return {"comments": [_resolve_comment(c, profile_svc, viewer_id) for c in comments]}
 
 
-@router.delete("/articles/{slug}/comments/{comment_id}", status_code=200)
+@router.delete("/articles/{slug}/comments/{comment_id}", status_code=204)
 def delete_comment(
     slug: str,
     comment_id: int,
@@ -79,8 +81,10 @@ def delete_comment(
 ):
     try:
         comment_svc.delete(slug, comment_id, user_id)
+    except CommentNotFoundError:
+        raise HTTPException(404, detail={"errors": {"comment": ["not found"]}})
     except NotFoundError:
-        raise HTTPException(404, detail={"errors": {"body": ["Not Found"]}})
+        raise HTTPException(404, detail={"errors": {"article": ["not found"]}})
     except ForbiddenError:
-        raise HTTPException(403, detail={"errors": {"body": ["Forbidden"]}})
-    return {}
+        raise HTTPException(403, detail={"errors": {"comment": ["forbidden"]}})
+    return None

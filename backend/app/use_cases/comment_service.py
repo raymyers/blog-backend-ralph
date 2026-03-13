@@ -1,6 +1,6 @@
 from app.domain.models import Comment
 from app.ports.interfaces import ArticleRepository, CommentRepository
-from app.use_cases.errors import ForbiddenError, NotFoundError
+from app.use_cases.errors import CommentNotFoundError, ForbiddenError, NotFoundError, ValidationError
 
 
 class CommentService:
@@ -13,6 +13,8 @@ class CommentService:
         self._articles = articles
 
     def add(self, slug: str, author_id: int, body: str) -> Comment:
+        if not body or not body.strip():
+            raise ValidationError("body", "can't be blank")
         article = self._articles.find_by_slug(slug)
         if article is None:
             raise NotFoundError(slug)
@@ -32,7 +34,7 @@ class CommentService:
             raise NotFoundError(slug)
         comment = self._comments.find_by_id(comment_id)
         if comment is None:
-            raise NotFoundError(str(comment_id))
+            raise CommentNotFoundError(str(comment_id))
         if comment.author_id != requester_id:
             raise ForbiddenError()
         self._comments.delete(comment)

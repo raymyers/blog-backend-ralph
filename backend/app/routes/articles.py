@@ -150,7 +150,7 @@ def get_article(
     try:
         article = article_svc.get(slug)
     except NotFoundError:
-        raise HTTPException(404, detail={"errors": {"body": ["Not Found"]}})
+        raise HTTPException(404, detail={"errors": {"article": ["not found"]}})
     return {"article": _resolve_article(article, article_svc, profile_svc, viewer_id)}
 
 
@@ -170,17 +170,22 @@ def update_article(
         kwargs["description"] = data["description"]
     if "body" in data:
         kwargs["body"] = data["body"]
+    if "tagList" in data:
+        tag_val = data["tagList"]
+        if tag_val is None:
+            raise HTTPException(422, detail={"errors": {"tagList": ["must be a list"]}})
+        kwargs["tag_list"] = tag_val
 
     try:
         article = article_svc.update(slug, user_id, **kwargs)
     except NotFoundError:
-        raise HTTPException(404, detail={"errors": {"body": ["Not Found"]}})
+        raise HTTPException(404, detail={"errors": {"article": ["not found"]}})
     except ForbiddenError:
-        raise HTTPException(403, detail={"errors": {"body": ["Forbidden"]}})
+        raise HTTPException(403, detail={"errors": {"article": ["forbidden"]}})
     return {"article": _resolve_article(article, article_svc, profile_svc, user_id)}
 
 
-@router.delete("/articles/{slug}", status_code=200)
+@router.delete("/articles/{slug}", status_code=204)
 def delete_article(
     slug: str,
     user_id: RequiredUserIdDep,
@@ -189,10 +194,10 @@ def delete_article(
     try:
         article_svc.delete(slug, user_id)
     except NotFoundError:
-        raise HTTPException(404, detail={"errors": {"body": ["Not Found"]}})
+        raise HTTPException(404, detail={"errors": {"article": ["not found"]}})
     except ForbiddenError:
-        raise HTTPException(403, detail={"errors": {"body": ["Forbidden"]}})
-    return {}
+        raise HTTPException(403, detail={"errors": {"article": ["forbidden"]}})
+    return None
 
 
 @router.post("/articles/{slug}/favorite")
@@ -205,7 +210,7 @@ def favorite_article(
     try:
         article = article_svc.favorite(slug, user_id)
     except NotFoundError:
-        raise HTTPException(404, detail={"errors": {"body": ["Not Found"]}})
+        raise HTTPException(404, detail={"errors": {"article": ["not found"]}})
     return {"article": _resolve_article(article, article_svc, profile_svc, user_id)}
 
 
@@ -219,7 +224,7 @@ def unfavorite_article(
     try:
         article = article_svc.unfavorite(slug, user_id)
     except NotFoundError:
-        raise HTTPException(404, detail={"errors": {"body": ["Not Found"]}})
+        raise HTTPException(404, detail={"errors": {"article": ["not found"]}})
     return {"article": _resolve_article(article, article_svc, profile_svc, user_id)}
 
 

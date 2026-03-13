@@ -103,6 +103,27 @@ def test_update_article_not_found_raises():
         svc.update("no-such-slug", 1, title="New")
 
 
+def test_update_article_tag_list_replaces_tags():
+    svc = make_service()
+    svc.create(1, "My Article", "desc", "body", tag_list=["old"])
+    updated = svc.update("my-article", 1, tag_list=["new1", "new2"])
+    assert updated.tag_list == ["new1", "new2"]
+
+
+def test_update_article_empty_tag_list_removes_all_tags():
+    svc = make_service()
+    svc.create(1, "My Article", "desc", "body", tag_list=["a", "b"])
+    updated = svc.update("my-article", 1, tag_list=[])
+    assert updated.tag_list == []
+
+
+def test_update_article_without_tag_list_preserves_existing():
+    svc = make_service()
+    svc.create(1, "My Article", "desc", "body", tag_list=["keep"])
+    updated = svc.update("my-article", 1, title="Updated Title")
+    assert "keep" in updated.tag_list
+
+
 def test_delete_article_removes_it():
     svc = make_service()
     svc.create(1, "My Article", "desc", "body")

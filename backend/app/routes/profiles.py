@@ -25,7 +25,7 @@ def get_profile(username: str, viewer_id: OptionalUserIdDep, svc: ProfileService
     try:
         user, following = svc.get_profile(username, viewer_id)
     except NotFoundError:
-        raise HTTPException(404, detail={"errors": {"body": ["Not Found"]}})
+        raise HTTPException(404, detail={"errors": {"profile": ["not found"]}})
     return _profile_response(user, following)
 
 
@@ -34,7 +34,7 @@ def follow_user(username: str, user_id: RequiredUserIdDep, svc: ProfileServiceDe
     try:
         user, following = svc.follow(username, user_id)
     except NotFoundError:
-        raise HTTPException(404, detail={"errors": {"body": ["Not Found"]}})
+        raise HTTPException(404, detail={"errors": {"profile": ["not found"]}})
     return _profile_response(user, following)
 
 
@@ -43,5 +43,5 @@ def unfollow_user(username: str, user_id: RequiredUserIdDep, svc: ProfileService
     try:
         user, following = svc.unfollow(username, user_id)
     except NotFoundError:
-        raise HTTPException(404, detail={"errors": {"body": ["Not Found"]}})
+        raise HTTPException(404, detail={"errors": {"profile": ["not found"]}})
     return _profile_response(user, following)

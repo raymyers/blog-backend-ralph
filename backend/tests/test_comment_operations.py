@@ -3,7 +3,7 @@
 import pytest
 
 from app.use_cases.comment_service import CommentService
-from app.use_cases.errors import ForbiddenError, NotFoundError
+from app.use_cases.errors import CommentNotFoundError, ForbiddenError, NotFoundError, ValidationError
 from tests.fakes import FakeArticleRepository, FakeCommentRepository, FakeFollowRepository, FakeUserRepository
 
 
@@ -88,5 +88,20 @@ def test_delete_comment_unknown_article_raises():
 def test_delete_comment_unknown_id_raises():
     svc, articles = make_service()
     seed_article(articles)
-    with pytest.raises(NotFoundError):
+    with pytest.raises(CommentNotFoundError):
         svc.delete("my-article", 9999, requester_id=1)
+
+
+def test_add_comment_blank_body_raises_validation_error():
+    svc, articles = make_service()
+    seed_article(articles)
+    with pytest.raises(ValidationError) as exc_info:
+        svc.add("my-article", author_id=1, body="")
+    assert exc_info.value.field == "body"
+
+
+def test_add_comment_whitespace_body_raises_validation_error():
+    svc, articles = make_service()
+    seed_article(articles)
+    with pytest.raises(ValidationError):
+        svc.add("my-article", author_id=1, body="   ")
