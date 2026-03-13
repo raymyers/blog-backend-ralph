@@ -13,17 +13,17 @@ Spec references:
 **Spec refs:** [endpoints.md](../../realworld/docs/src/content/docs/specifications/backend/endpoints.md) · [api-response-format.md](../../realworld/docs/src/content/docs/specifications/backend/api-response-format.md) · [error-handling.md](../../realworld/docs/src/content/docs/specifications/backend/error-handling.md) · [cors.md](../../realworld/docs/src/content/docs/specifications/backend/cors.md)
 
 ### Data model
-- [ ] User: `email` (unique), `username` (unique), `password` (hashed), `bio` (nullable), `image` (nullable)
+- [x] User: `email` (unique), `username` (unique), `password` (hashed), `bio` (nullable), `image` (nullable)
 
 ### Endpoints
-- [ ] `POST /api/users` — register; required: `email`, `username`, `password`; returns user + JWT; HTTP 201
-- [ ] `POST /api/users/login` — login; required: `email`, `password`; returns user + JWT
-- [ ] `GET /api/user` — auth required; returns current user with fresh token
-- [ ] `PUT /api/user` — auth required; accepted: `email`, `username`, `password`, `bio`, `image`; empty string for `bio`/`image` normalizes to `null`; reject empty or null `email`/`username` with 422
+- [x] `POST /api/users` — register; required: `email`, `username`, `password`; returns user + JWT; HTTP 201
+- [x] `POST /api/users/login` — login; required: `email`, `password`; returns user + JWT
+- [x] `GET /api/user` — auth required; returns current user with fresh token
+- [x] `PUT /api/user` — auth required; accepted: `email`, `username`, `password`, `bio`, `image`; empty string for `bio`/`image` normalizes to `null`; reject empty or null `email`/`username` with 422
 
 ### Auth middleware
-- [ ] Parse `Authorization: Token <jwt>` header on protected routes
-- [ ] Return 401 when token is absent or invalid
+- [x] Parse `Authorization: Token <jwt>` header on protected routes
+- [x] Return 401 when token is absent or invalid
 
 ### Error handling
 - [x] 422 with `{ "errors": { "body": [...] } }` for validation failures
