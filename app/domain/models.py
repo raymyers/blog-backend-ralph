@@ -22,6 +22,14 @@ class User(SQLModel, table=True):
     # Relationships
     articles: List["Article"] = Relationship(back_populates="author")
     comments: List["Comment"] = Relationship(back_populates="author")
+    
+    # For follower relationships (use direct SQL queries since self-referential is complex)
+    # followers: List["User"] = Relationship(
+    #     "User",
+    #     secondary="follows",
+    #     primaryjoin="User.id==Follow.following_id",
+    #     secondaryjoin="User.id==Follow.follower_id",
+    # )
 
 
 class Article(SQLModel, table=True):

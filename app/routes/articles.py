@@ -204,8 +204,13 @@ async def get_feed(
     article_service: ArticleService = Depends(get_article_service),
 ):
     """Get feed of articles from followed users."""
-    # Get follower IDs (simplified - need to implement follow functionality)
-    follower_ids = []
+    # Get follower IDs from profile service
+    from app.use_cases.profile_service import ProfileService
+    from app.database import Session
+    
+    with Session() as session:
+        profile_service = ProfileService(session)
+        follower_ids = await profile_service.get_following(current_user.id)
     
     articles = await article_service.get_feed(follower_ids, limit, offset)
     
