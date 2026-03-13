@@ -8,13 +8,7 @@ All work moves in small, known-good increments — one commit, one sentence, all
 
 ## Skills
 
-| Skill | When to load |
-|---|---|
-| [process](.agents/skills/process/SKILL.md) | Always — governs how all work is done |
-| [testing](.agents/skills/testing/SKILL.md) | Any code change — TDD is non-negotiable |
-| [architecture](.agents/skills/architecture/SKILL.md) | Design decisions, new modules, refactoring |
-| [review](.agents/skills/review/SKILL.md) | PR review or test suite quality assessment |
-
-## Current Plan
-
-See [`docs/plans/`](docs/plans/) for active work.
+- [process](.agents/skills/process/SKILL.md) — always; governs how all work is done
+- [testing](.agents/skills/testing/SKILL.md) — any code change; TDD is non-negotiable
+- [architecture](.agents/skills/architecture/SKILL.md) — design decisions, new modules, refactoring
+- [review](.agents/skills/review/SKILL.md) — PR review or test suite quality assessment
