@@ -6,6 +6,8 @@
 import sqlight
 
 pub fn run(db: sqlight.Connection) -> Result(Nil, sqlight.Error) {
+  // Enable foreign key enforcement (required for ON DELETE CASCADE)
+  let assert Ok(Nil) = sqlight.exec("PRAGMA foreign_keys = ON;", db)
   let sql =
     "
     CREATE TABLE IF NOT EXISTS users (

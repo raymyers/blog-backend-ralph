@@ -13,5 +13,9 @@ pub fn hash(password: String) -> String {
 }
 
 pub fn verify(password: String, hashed: String) -> Bool {
-  hash(password) == hashed
+  let candidate = hash(password)
+  crypto.secure_compare(
+    bit_array.from_string(candidate),
+    bit_array.from_string(hashed),
+  )
 }

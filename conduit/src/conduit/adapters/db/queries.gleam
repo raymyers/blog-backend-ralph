@@ -1,7 +1,6 @@
 // Database queries — outbound adapter implementing persistence.
 
 import gleam/dynamic/decode
-import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/string
@@ -275,7 +274,10 @@ pub fn update_article_row(
 }
 
 pub fn delete_article_by_slug(db: sqlight.Connection, slug: String) -> Result(Nil, sqlight.Error) {
-  sqlight.exec("DELETE FROM articles WHERE slug = '" <> slug <> "'", db)
+  let sql = "DELETE FROM articles WHERE slug = ?"
+  case sqlight.query(sql, db, [sqlight.text(slug)], count_decoder()) {
+    _ -> Ok(Nil)
+  }
 }
 
 // ── Tag queries ─────────────────────────────────────────────
@@ -291,7 +293,7 @@ fn tag_name_decoder() -> decode.Decoder(String) {
 }
 
 pub fn upsert_tag(db: sqlight.Connection, name: String) -> Result(Int, sqlight.Error) {
-  let _ = sqlight.exec("INSERT OR IGNORE INTO tags (name) VALUES ('" <> name <> "')", db)
+  let _ = sqlight.query("INSERT OR IGNORE INTO tags (name) VALUES (?)", db, [sqlight.text(name)], tag_id_decoder())
   case sqlight.query("SELECT id FROM tags WHERE name = ?", db, [sqlight.text(name)], tag_id_decoder()) {
     Ok([id]) -> Ok(id)
     _ -> Error(sqlight.SqlightError(sqlight.Constraint, "tag not found", -1))
@@ -299,7 +301,10 @@ pub fn upsert_tag(db: sqlight.Connection, name: String) -> Result(Int, sqlight.E
 }
 
 pub fn link_article_tag(db: sqlight.Connection, article_id: Int, tag_id: Int) -> Result(Nil, sqlight.Error) {
-  sqlight.exec("INSERT OR IGNORE INTO article_tags (article_id, tag_id) VALUES (" <> int.to_string(article_id) <> ", " <> int.to_string(tag_id) <> ")", db)
+  let sql = "INSERT OR IGNORE INTO article_tags (article_id, tag_id) VALUES (?, ?)"
+  case sqlight.query(sql, db, [sqlight.int(article_id), sqlight.int(tag_id)], count_decoder()) {
+    _ -> Ok(Nil)
+  }
 }
 
 pub fn get_article_tags(db: sqlight.Connection, article_id: Int) -> Result(List(String), sqlight.Error) {
@@ -365,7 +370,10 @@ pub fn find_comment_by_id(db: sqlight.Connection, id: Int) -> Result(Option(Comm
 }
 
 pub fn delete_comment(db: sqlight.Connection, id: Int) -> Result(Nil, sqlight.Error) {
-  sqlight.exec("DELETE FROM comments WHERE id = " <> int.to_string(id), db)
+  let sql = "DELETE FROM comments WHERE id = ?"
+  case sqlight.query(sql, db, [sqlight.int(id)], count_decoder()) {
+    _ -> Ok(Nil)
+  }
 }
 
 // ── Follow queries ──────────────────────────────────────────
@@ -378,11 +386,17 @@ pub fn is_following(db: sqlight.Connection, follower_id: Int, followed_id: Int) 
 }
 
 pub fn follow(db: sqlight.Connection, follower_id: Int, followed_id: Int) -> Result(Nil, sqlight.Error) {
-  sqlight.exec("INSERT OR IGNORE INTO follows (follower_id, followed_id) VALUES (" <> int.to_string(follower_id) <> ", " <> int.to_string(followed_id) <> ")", db)
+  let sql = "INSERT OR IGNORE INTO follows (follower_id, followed_id) VALUES (?, ?)"
+  case sqlight.query(sql, db, [sqlight.int(follower_id), sqlight.int(followed_id)], count_decoder()) {
+    _ -> Ok(Nil)
+  }
 }
 
 pub fn unfollow(db: sqlight.Connection, follower_id: Int, followed_id: Int) -> Result(Nil, sqlight.Error) {
-  sqlight.exec("DELETE FROM follows WHERE follower_id = " <> int.to_string(follower_id) <> " AND followed_id = " <> int.to_string(followed_id), db)
+  let sql = "DELETE FROM follows WHERE follower_id = ? AND followed_id = ?"
+  case sqlight.query(sql, db, [sqlight.int(follower_id), sqlight.int(followed_id)], count_decoder()) {
+    _ -> Ok(Nil)
+  }
 }
 
 // ── Favorite queries ────────────────────────────────────────
@@ -395,9 +409,15 @@ pub fn is_favorited(db: sqlight.Connection, user_id: Int, article_id: Int) -> Re
 }
 
 pub fn favorite(db: sqlight.Connection, user_id: Int, article_id: Int) -> Result(Nil, sqlight.Error) {
-  sqlight.exec("INSERT OR IGNORE INTO favorites (user_id, article_id) VALUES (" <> int.to_string(user_id) <> ", " <> int.to_string(article_id) <> ")", db)
+  let sql = "INSERT OR IGNORE INTO favorites (user_id, article_id) VALUES (?, ?)"
+  case sqlight.query(sql, db, [sqlight.int(user_id), sqlight.int(article_id)], count_decoder()) {
+    _ -> Ok(Nil)
+  }
 }
 
 pub fn unfavorite(db: sqlight.Connection, user_id: Int, article_id: Int) -> Result(Nil, sqlight.Error) {
-  sqlight.exec("DELETE FROM favorites WHERE user_id = " <> int.to_string(user_id) <> " AND article_id = " <> int.to_string(article_id), db)
+  let sql = "DELETE FROM favorites WHERE user_id = ? AND article_id = ?"
+  case sqlight.query(sql, db, [sqlight.int(user_id), sqlight.int(article_id)], count_decoder()) {
+    _ -> Ok(Nil)
+  }
 }

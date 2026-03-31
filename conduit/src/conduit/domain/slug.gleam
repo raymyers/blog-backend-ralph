@@ -22,7 +22,7 @@ pub fn from_title(title: String) -> String {
   })
   |> string.concat
   |> collapse_dashes
-  |> string.trim
+  |> trim_dashes
 }
 
 fn collapse_dashes(s: String) -> String {
@@ -32,6 +32,27 @@ fn collapse_dashes(s: String) -> String {
   }
 }
 
-pub fn make_unique(slug: String, suffix: Int) -> String {
-  slug <> "-" <> int.to_string(suffix)
+fn trim_dashes(s: String) -> String {
+  s
+  |> string.trim
+  |> trim_leading_dash
+  |> trim_trailing_dash
+}
+
+fn trim_leading_dash(s: String) -> String {
+  case string.starts_with(s, "-") {
+    True -> trim_leading_dash(string.drop_start(s, 1))
+    False -> s
+  }
+}
+
+fn trim_trailing_dash(s: String) -> String {
+  case string.ends_with(s, "-") {
+    True -> trim_trailing_dash(string.drop_end(s, 1))
+    False -> s
+  }
+}
+
+pub fn make_unique(base: String, suffix: Int) -> String {
+  base <> "-" <> int.to_string(suffix)
 }

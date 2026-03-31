@@ -2,6 +2,7 @@ import conduit/adapters/crypto/password
 import conduit/adapters/crypto/token
 import conduit/adapters/db/queries
 import conduit/adapters/web/json_codec
+import conduit/domain/slug
 import gleam/http.{Delete, Get, Post, Put}
 import gleam/http/response
 import gleam/int
@@ -246,9 +247,9 @@ fn feed_articles(req: Request, ctx: Context) -> Response {
   }
 }
 
-fn get_article(req: Request, ctx: Context, slug: String) -> Response {
+fn get_article(req: Request, ctx: Context, article_slug: String) -> Response {
   let viewer_id = get_auth_user(req) |> option.unwrap(-1)
-  case queries.find_article_by_slug(ctx.db, slug) {
+  case queries.find_article_by_slug(ctx.db, article_slug) {
     Ok(Some(row)) -> json_resp(200, json_codec.encode_single_article(article_row_to_json(ctx, row, viewer_id)))
     _ -> error_response(404, "article", "not found")
   }
@@ -259,9 +260,9 @@ fn create_article(req: Request, ctx: Context) -> Response {
   use body <- wisp.require_string_body(req)
   case json_codec.decode_new_article(body) {
     Ok(#(title, description, article_body, tags)) -> {
-      let base_slug = slug_from_title(title)
-      let slug = make_unique_slug(ctx.db, base_slug, 0)
-      case queries.insert_article(ctx.db, slug, title, description, article_body, uid) {
+      let base_slug = slug.from_title(title)
+      let article_slug = make_unique_slug(ctx.db, base_slug, 0)
+      case queries.insert_article(ctx.db, article_slug, title, description, article_body, uid) {
         Ok(row) -> {
           list.each(tags, fn(t) {
             case queries.upsert_tag(ctx.db, t) {
@@ -281,10 +282,10 @@ fn create_article(req: Request, ctx: Context) -> Response {
   }
 }
 
-fn update_article_handler(req: Request, ctx: Context, slug: String) -> Response {
+fn update_article_handler(req: Request, ctx: Context, article_slug: String) -> Response {
   use uid <- require_auth(req)
   use body <- wisp.require_string_body(req)
-  case queries.find_article_by_slug(ctx.db, slug) {
+  case queries.find_article_by_slug(ctx.db, article_slug) {
     Ok(Some(existing)) ->
       case existing.author_id == uid {
         False -> error_response(403, "article", "forbidden")
@@ -295,10 +296,10 @@ fn update_article_handler(req: Request, ctx: Context, slug: String) -> Response 
               let new_desc = option.unwrap(description, existing.description)
               let new_body = option.unwrap(article_body, existing.body)
               let new_slug = case title {
-                Some(t) -> make_unique_slug(ctx.db, slug_from_title(t), 0)
-                None -> slug
+                Some(t) -> make_unique_slug(ctx.db, slug.from_title(t), 0)
+                None -> article_slug
               }
-              case queries.update_article_row(ctx.db, slug, new_slug, new_title, new_desc, new_body) {
+              case queries.update_article_row(ctx.db, article_slug, new_slug, new_title, new_desc, new_body) {
                 Ok(row) -> json_resp(200, json_codec.encode_single_article(article_row_to_json(ctx, row, uid)))
                 Error(_) -> error_response(422, "article", "could not be updated")
               }
@@ -310,14 +311,14 @@ fn update_article_handler(req: Request, ctx: Context, slug: String) -> Response 
   }
 }
 
-fn delete_article(req: Request, ctx: Context, slug: String) -> Response {
+fn delete_article(req: Request, ctx: Context, article_slug: String) -> Response {
   use uid <- require_auth(req)
-  case queries.find_article_by_slug(ctx.db, slug) {
+  case queries.find_article_by_slug(ctx.db, article_slug) {
     Ok(Some(existing)) ->
       case existing.author_id == uid {
         False -> error_response(403, "article", "forbidden")
         True -> {
-          let _ = queries.delete_article_by_slug(ctx.db, slug)
+          let _ = queries.delete_article_by_slug(ctx.db, article_slug)
           wisp.response(204)
         }
       }
@@ -325,10 +326,10 @@ fn delete_article(req: Request, ctx: Context, slug: String) -> Response {
   }
 }
 
-fn add_comment(req: Request, ctx: Context, slug: String) -> Response {
+fn add_comment(req: Request, ctx: Context, article_slug: String) -> Response {
   use uid <- require_auth(req)
   use body <- wisp.require_string_body(req)
-  case queries.find_article_by_slug(ctx.db, slug) {
+  case queries.find_article_by_slug(ctx.db, article_slug) {
     Ok(Some(article)) ->
       case json_codec.decode_new_comment(body) {
         Ok(comment_body) ->
@@ -345,9 +346,9 @@ fn add_comment(req: Request, ctx: Context, slug: String) -> Response {
   }
 }
 
-fn get_comments(req: Request, ctx: Context, slug: String) -> Response {
+fn get_comments(req: Request, ctx: Context, article_slug: String) -> Response {
   let viewer_id = get_auth_user(req) |> option.unwrap(-1)
-  case queries.find_article_by_slug(ctx.db, slug) {
+  case queries.find_article_by_slug(ctx.db, article_slug) {
     Ok(Some(article)) ->
       case queries.get_article_comments(ctx.db, article.id) {
         Ok(rows) -> {
@@ -385,12 +386,12 @@ fn delete_comment_handler(req: Request, ctx: Context, id_str: String) -> Respons
   }
 }
 
-fn favorite_article(req: Request, ctx: Context, slug: String) -> Response {
+fn favorite_article(req: Request, ctx: Context, article_slug: String) -> Response {
   use uid <- require_auth(req)
-  case queries.find_article_by_slug(ctx.db, slug) {
+  case queries.find_article_by_slug(ctx.db, article_slug) {
     Ok(Some(row)) -> {
       let _ = queries.favorite(ctx.db, uid, row.id)
-      case queries.find_article_by_slug(ctx.db, slug) {
+      case queries.find_article_by_slug(ctx.db, article_slug) {
         Ok(Some(updated)) -> json_resp(200, json_codec.encode_single_article(article_row_to_json(ctx, updated, uid)))
         _ -> error_response(500, "server", "internal error")
       }
@@ -399,12 +400,12 @@ fn favorite_article(req: Request, ctx: Context, slug: String) -> Response {
   }
 }
 
-fn unfavorite_article(req: Request, ctx: Context, slug: String) -> Response {
+fn unfavorite_article(req: Request, ctx: Context, article_slug: String) -> Response {
   use uid <- require_auth(req)
-  case queries.find_article_by_slug(ctx.db, slug) {
+  case queries.find_article_by_slug(ctx.db, article_slug) {
     Ok(Some(row)) -> {
       let _ = queries.unfavorite(ctx.db, uid, row.id)
-      case queries.find_article_by_slug(ctx.db, slug) {
+      case queries.find_article_by_slug(ctx.db, article_slug) {
         Ok(Some(updated)) -> json_resp(200, json_codec.encode_single_article(article_row_to_json(ctx, updated, uid)))
         _ -> error_response(500, "server", "internal error")
       }
@@ -448,38 +449,13 @@ fn serve_spa() -> Response {
   wisp.html_response("<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n  <title>Conduit</title>\n  <link href=\"https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css\" rel=\"stylesheet\">\n  <link href=\"https://fonts.googleapis.com/css?family=Titillium+Web:700|Source+Serif+Pro:400,700|Merriweather+Sans:400,700|Source+Sans+Pro:400,300,600,700,300italic,400italic,600italic,700italic\" rel=\"stylesheet\">\n  <link rel=\"stylesheet\" href=\"/static/main.css\">\n  <script defer src=\"/static/app.mjs\" type=\"module\"></script>\n</head>\n<body>\n  <div id=\"app\"></div>\n</body>\n</html>", 200)
 }
 
-fn slug_from_title(title: String) -> String {
-  title
-  |> string.lowercase
-  |> string.to_graphemes
-  |> list.map(fn(c) {
-    case c {
-      " " -> "-"
-      _ ->
-        case string.contains("abcdefghijklmnopqrstuvwxyz0123456789-", c) {
-          True -> c
-          False -> ""
-        }
-    }
-  })
-  |> string.concat
-  |> collapse_dashes
-}
-
-fn collapse_dashes(s: String) -> String {
-  case string.contains(s, "--") {
-    True -> collapse_dashes(string.replace(s, "--", "-"))
-    False -> s
-  }
-}
-
 fn make_unique_slug(db: sqlight.Connection, base: String, attempt: Int) -> String {
-  let slug = case attempt {
+  let candidate = case attempt {
     0 -> base
-    n -> base <> "-" <> int.to_string(n)
+    n -> slug.make_unique(base, n)
   }
-  case queries.find_article_by_slug(db, slug) {
+  case queries.find_article_by_slug(db, candidate) {
     Ok(Some(_)) -> make_unique_slug(db, base, attempt + 1)
-    _ -> slug
+    _ -> candidate
   }
 }
