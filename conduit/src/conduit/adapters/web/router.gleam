@@ -445,7 +445,7 @@ fn serve_static(path_segments: List(String)) -> Response {
 }
 
 fn serve_spa() -> Response {
-  wisp.html_response("<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n  <title>Conduit</title>\n  <link href=\"https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css\" rel=\"stylesheet\">\n  <link href=\"https://fonts.googleapis.com/css?family=Titillium+Web:700|Source+Serif+Pro:400,700|Merriweather+Sans:400,700|Source+Sans+Pro:400,300,600,700,300italic,400italic,600italic,700italic\" rel=\"stylesheet\">\n  <link rel=\"stylesheet\" href=\"https://demo.productionready.io/main.css\">\n  <script defer src=\"/static/app.mjs\" type=\"module\"></script>\n</head>\n<body>\n  <div id=\"app\"></div>\n</body>\n</html>", 200)
+  wisp.html_response("<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n  <title>Conduit</title>\n  <link href=\"https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css\" rel=\"stylesheet\">\n  <link href=\"https://fonts.googleapis.com/css?family=Titillium+Web:700|Source+Serif+Pro:400,700|Merriweather+Sans:400,700|Source+Sans+Pro:400,300,600,700,300italic,400italic,600italic,700italic\" rel=\"stylesheet\">\n  <link rel=\"stylesheet\" href=\"/static/main.css\">\n  <script defer src=\"/static/app.mjs\" type=\"module\"></script>\n</head>\n<body>\n  <div id=\"app\"></div>\n</body>\n</html>", 200)
 }
 
 fn slug_from_title(title: String) -> String {

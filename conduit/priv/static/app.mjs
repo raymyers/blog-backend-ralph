@@ -165,7 +165,7 @@ function render() {
 }
 
 function defaultAvatar(img) {
-  return (img && img !== '') ? img : 'https://api.realworld.io/images/smiley-cyrus.jpeg';
+  return (img && img !== '') ? img : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23e0e0e0'/%3E%3Ccircle cx='50' cy='38' r='16' fill='%23bbb'/%3E%3Cellipse cx='50' cy='78' rx='28' ry='22' fill='%23bbb'/%3E%3C/svg%3E";
 }
 
 function navbarHtml() {
